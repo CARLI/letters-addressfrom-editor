@@ -1,0 +1,39 @@
+.loading-shade {
+  position: fixed;
+  top: 0;
+  left: 0;
+  height: 100%;
+  width: 100%;
+  background: rgba(0, 0, 0, 0.15);
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.mat-checkbox {
+  display: block;
+  margin-bottom: 5px;
+}
+
+mat-label {
+  display: block;
+  margin-bottom: 5px;
+}
+
+#emptyList {
+  max-width: 200px;
+  margin: 0 auto;
+  text-align: center;
+}
+
+.dirty {
+  background-color: #175a17; /* Green */
+  color: white;
+}
+
+.wideinput {
+  display: block;
+  width: 250px;
+  margin-bottom: 30px;
+}

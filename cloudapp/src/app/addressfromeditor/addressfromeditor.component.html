@@ -1,0 +1,76 @@
+<div class="eca-actions">
+  <button mat-flat-button type="button" color="primary" (click)="loadLetters()">Retrieve Letters</button>
+  <button mat-flat-button type="button" color="secondary" (click)="clearLetters()" [disabled]="letters?.length < 1">Clear</button>
+</div>
+<div class="eca-actions">
+  <button mat-flat-button type="button" color="secondary" (click)="sortLetters()" [disabled]="letters?.length < 2">Sort by addressFrom</button>
+  <button mat-flat-button type="button" color="secondary" (click)="sortLettersByName()" [disabled]="letters?.length < 2">Sort by Letter</button>
+</div>
+
+
+<div class="loading-shade" *ngIf="loading">
+  <mat-progress-spinner 
+    [mode]="showProgress ? 'determinate' : 'indeterminate'"
+    diameter="50"
+    [value]="percentComplete"
+    >
+  </mat-progress-spinner>
+</div>
+
+<div *ngIf="letters?.length > 0 else emptyList">
+    <ul>
+      <div class="eca-actions">
+        <button mat-flat-button color="primary" (click)="updateLetters()"
+        [disabled]="loading || dirtyLetters() < 1">Update
+        </button>
+      </div>
+
+      <li *ngFor="let letter of letters">
+        <div [ngClass]="{'dirty': letter.isDirty()}">
+          <strong>{{ letter.description }}</strong>
+        </div>
+
+        <!--
+        <div>
+          {{letter | json}}
+        </div>
+        -->
+
+        <mat-checkbox
+        labelPosition="before"
+        tabindex="-1"
+        (ngModelChange)="addressFromEnabledChanged($event, letter)"
+        [(ngModel)]="letter.addressFromEnabled" name="addressFromEnabled"
+        >enabled</mat-checkbox>  
+
+        <mat-label>patron-facing: {{ letter.patronFacing }}</mat-label>
+
+        <input 
+          matInput 
+          type="text" 
+          class="wideinput" 
+          id="addressFrom"
+          required
+          #addressFrom="ngModel"
+          (ngModelChange)="addressFromChanged($event, letter)"
+          [(ngModel)]="letter.addressFrom" 
+          name="addressFrom"
+          />
+        
+      </li>
+      
+      <div class="eca-actions">
+        <button mat-flat-button color="primary" (click)="updateLetters()"
+        [disabled]="loading || dirtyLetters() < 1">Update
+        </button>
+      </div>
+    </ul>
+
+</div>
+
+<ng-template #emptyList>
+  <div id="emptyList">
+    <span class="uxf-icon uxf-list" style="font-size: 3em;"></span>
+    <div>Click 'Retrieve Letters' to load addressFrom label values.</div>
+  </div>
+</ng-template>

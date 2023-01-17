@@ -1,0 +1,18 @@
+{
+   "id": "letters-addressfrom-editor",
+   "title": "Letters addressFrom Editor",
+   "subtitle": "Edit addressFrom labels in Alma Letters",
+   "author": "Chris Delis",
+   "description": "This app allows you to view and edit the addressFrom label values of all your enabled Letters in Alma in one place. Setting the \"From\" email address to a valid domain increases email delivery and is also crucial for complying with your organization's DMARC policy.",
+   "pages": {
+      "help": "https://github.com/CARLI/letters-addressfrom-editor"
+   },
+   "icon": {
+      "type": "font",
+      "value": "fa fa-envelope"
+   },
+   "fullscreen": {
+      "allow": true,
+      "open": false
+   }
+}
