@@ -13,6 +13,8 @@ The current method to update an Alma Letter's addressFrom value requires you to:
 7) Wait for the update to finish (spinner)
 8) Repeat steps 2-7 for each Letter you wish to edit
 
+By using this app, you can do all the above in a single step.
+
 Screenshot:
 
 ![image](https://user-images.githubusercontent.com/6808751/212369041-56e9e5b6-b750-4cbe-8478-486f734bcebd.png)
@@ -23,7 +25,7 @@ This Cloud App requires "Admin" (General Admin?) privileges to run.
 
 I was hoping to allow anyone with "Letter Administrator" privileges, but I'm not sure how to do that.
 
-I have found example code that restricts access to a specific role in the Cloud App tuturials here:
+I have found example code that restricts access to a specific role in the Cloud App tutorials here:
 
 https://github.com/ExLibrisGroup/cloudapp-tutorials/blob/tutorials/cloudapp/src/app/configuration/configuration.component.ts#L68
 
