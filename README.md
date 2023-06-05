@@ -21,7 +21,7 @@ Screenshot:
 
 Note:
 
-This Cloud App requires "Admin" (General Admin?) privileges to run.
+This Cloud App requires "General System Administrator" privileges to run.
 
 I was hoping to allow anyone with "Letter Administrator" privileges, but I'm not sure how to do that.
 
