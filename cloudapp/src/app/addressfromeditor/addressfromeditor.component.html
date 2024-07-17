@@ -1,3 +1,11 @@
+<div class="eca-actions" *ngIf="languages.length > 1">
+  <mat-label>Language:</mat-label>
+  <mat-select [(value)]="selectedLanguage" (selectionChange)="languageChanged($event, selectedLanguage)">
+    <div *ngFor="let language of languages">
+      <mat-option [value]="language">{{language}}</mat-option>
+    </div>
+  </mat-select>
+</div>
 <div class="eca-actions">
   <button mat-flat-button type="button" color="primary" (click)="loadLetters()">Retrieve Letters</button>
   <button mat-flat-button type="button" color="secondary" (click)="clearLetters()" [disabled]="letters?.length < 1">Clear</button>

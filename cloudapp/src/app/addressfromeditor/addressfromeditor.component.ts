@@ -29,6 +29,9 @@ export class AddressFromEditorComponent implements OnInit {
 
   labelLinks = new Map<string, string>();
 
+  languages = new Array<string>();
+  selectedLanguage?: string;
+
   constructor( 
     private restService: CloudAppRestService,
     private appService: AppService,
@@ -36,6 +39,31 @@ export class AddressFromEditorComponent implements OnInit {
   ) { }
 
   ngOnInit() {
+    this.restService.call('/conf/mapping-tables/InstitutionLanguages')
+    .pipe(
+      concatMap((l: any) => l.row ),
+      filter((l: any) => l.enabled),
+      toArray(),
+    ).subscribe(
+        {
+        next: (s: any[])=>{
+          s.forEach(lang=>{
+            if (isRestErrorResponse(lang)) {
+              console.log(`Error retrieving languages: ${lang.message}`);
+            } else {
+              console.log(`Loaded language: ${lang.column0}`);
+              this.selectedLanguage = lang.column0;
+              this.languages.push(lang.column0);
+            }
+          })
+        },
+        error: e => this.alert.error('Error in loading languages(): ', e.message),
+        complete: () => {
+          console.log('Finished loading languages')
+          console.log(`Current language: ${this.selectedLanguage}`);
+        },
+        }
+    );
   }
 
   loadLetters() {
@@ -44,7 +72,8 @@ export class AddressFromEditorComponent implements OnInit {
     this.processed = 0;
     this.showProgress = false;
     this.num = 0;
-    this.restService.call('/conf/letters')
+    let url = '/conf/letters' + this.languageParameter();
+    this.restService.call(url)
     .pipe(
       concatMap((l: any) => l.letter ),
       filter((l: any) => l.enabled.value==='true'),
@@ -79,7 +108,8 @@ export class AddressFromEditorComponent implements OnInit {
   }
 
   getLetter(letter: any) {
-    return this.restService.call(this.labelLinks.get(letter.code)).pipe(
+    let url = this.labelLinks.get(letter.code) + this.languageParameter();
+    return this.restService.call(url).pipe(
       tap(() => this.processed++ ),
       tap(() => console.log(`getting ${letter.description}`)),
       catchError(e => of(e)),
@@ -141,10 +171,11 @@ export class AddressFromEditorComponent implements OnInit {
   }
 
   updateLetter(letter: Letter) {
+    let url =  this.labelLinks.get(letter.name) + this.languageParameter(); 
     letter.setAddressFrom(letter.addressFrom, letter.addressFromEnabled);
     const requestBody = letter.restObject;
     let request: Request = {
-      url: this.labelLinks.get(letter.name),
+      url: url,
       method: HttpMethod.PUT,
       requestBody
     };
@@ -158,10 +189,22 @@ export class AddressFromEditorComponent implements OnInit {
   clearLetters() {
     this.letters = [];
     this.clearDirtyControlsFlag();
+    this.letterDescriptions = new Map<string, string>();
+    this.labelLinks = new Map<string, string>();
   }
 
   dirtyLetters() {
     return Object.keys(this.dirtyControls).length;
+  }
+
+  languageChanged(newVal, lang) {
+    console.log(`selectedLanguage: ${this.selectedLanguage}`);
+    this.clearLetters();
+  }
+
+  // helper
+  languageParameter() {
+    return (this.selectedLanguage ? ('?lang=' + this.selectedLanguage) : '');
   }
 
   addressFromEnabledChanged(newVal, letter) {
