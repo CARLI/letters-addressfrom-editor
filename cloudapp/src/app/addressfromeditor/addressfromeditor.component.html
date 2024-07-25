@@ -6,11 +6,11 @@
     </div>
   </mat-select>
 </div>
-<div class="eca-actions">
+<div class="eca-actions" *ngIf="languagesLoaded">
   <button mat-flat-button type="button" color="primary" (click)="loadLetters()">Retrieve Letters</button>
   <button mat-flat-button type="button" color="secondary" (click)="clearLetters()" [disabled]="letters?.length < 1">Clear</button>
 </div>
-<div class="eca-actions">
+<div class="eca-actions" *ngIf="languagesLoaded">
   <button mat-flat-button type="button" color="secondary" (click)="sortLetters()" [disabled]="letters?.length < 2">Sort by addressFrom</button>
   <button mat-flat-button type="button" color="secondary" (click)="sortLettersByName()" [disabled]="letters?.length < 2">Sort by Letter</button>
 </div>
@@ -77,7 +77,7 @@
 </div>
 
 <ng-template #emptyList>
-  <div id="emptyList">
+  <div id="emptyList" *ngIf="languagesLoaded">
     <span class="uxf-icon uxf-list" style="font-size: 3em;"></span>
     <div>Click 'Retrieve Letters' to load addressFrom label values.</div>
   </div>
