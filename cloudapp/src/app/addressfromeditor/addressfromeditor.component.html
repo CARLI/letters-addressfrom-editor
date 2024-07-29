@@ -25,6 +25,20 @@
         </button>
       </div>
 
+
+      <div class="eca-actions">
+        <mat-label>Set all addressFrom values:</mat-label>
+        <input 
+          matInput 
+          type="text" 
+          class="wideinput" 
+          id="setAllValues"
+          (ngModelChange)="setAllValuesChanged($event)"
+          [(ngModel)]="setAllValues" 
+          name="setAllValues"/>
+       </div>
+        
+
       <li *ngFor="let letter of letters">
         <div [ngClass]="{'dirty': letter.isDirty()}">
           <strong>{{ letter.description }}</strong>

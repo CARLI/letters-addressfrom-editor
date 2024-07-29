@@ -32,6 +32,10 @@ export class Letter {
         return false;
     }
 
+    reset() {
+      this.addressFrom = this.addressFromOrig;
+    }
+
     // if addressFrom and addressFromEnabled are set, then we are preparing to update (PUT);
     // otherwise, we are loading (GET) original values from API
     setAddressFrom(addressFrom: string = null, addressFromEnabled: boolean = null) {

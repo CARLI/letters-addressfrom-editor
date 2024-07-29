@@ -23,6 +23,8 @@ export class AddressFromEditorComponent implements OnInit {
   showProgress = false;
   dirtyControls: { [key: string]: number } = {};
 
+  setAllValues = '';
+
   // we want to use the 'name' from /conf/letters
   // instead of the 'description' from /conf/code-tables
   // so that it matches what Alma displays in 'Letters Configuration'
@@ -45,11 +47,6 @@ export class AddressFromEditorComponent implements OnInit {
 
   ngOnInit() {
     this.loadLanguages();
-  }
-
-  languageChanged(newVal, lang) {
-    console.log(`selectedLanguage: ${this.selectedLanguage}`);
-    //this.clearLetters();
   }
   
   // Hack alert: When we make an API call using the 'lang' parameter, Alma seems to get confused and begins
@@ -113,6 +110,7 @@ export class AddressFromEditorComponent implements OnInit {
       filter((l: any) => l.enabled.value==='true'),
       filter((l: any) => l.channel==='EMAIL'),
       tap(() => this.num++),
+      //take(3), // debugging
       tap((l: any) => {
         this.letterDescriptions.set(l.code, l.name);
         this.labelLinks.set(l.code, l.labels.link);
@@ -146,8 +144,8 @@ export class AddressFromEditorComponent implements OnInit {
   getEnLetter(letter: any) {
     let url = this.labelLinks.get(letter.code) + this.languageParameter('en'); 
     return this.restService.call(url).pipe(
+      tap(() => console.log(`getting ${letter.description}`)),
       tap(() => this.processed++ ),
-      tap(() => console.log(`getting ${letter.description} ; lang en`)),
       catchError(e => of(e)),
     );
   }
@@ -155,8 +153,8 @@ export class AddressFromEditorComponent implements OnInit {
   getLangLetter(letter: Letter, lang: string) {
     let url = this.labelLinks.get(letter.name) + this.languageParameter(lang); 
     return this.restService.call(url).pipe(
-      tap(() => this.processed++ ),
       tap(() => console.log(`getLangLetter, getting ${letter.description} ; lang ${lang}`)),
+      tap(() => this.processed++ ),
       catchError(e => of(e)),
     );
   }
@@ -175,6 +173,7 @@ export class AddressFromEditorComponent implements OnInit {
     .pipe(
       map((l) => this.getLangLetter(l, this.selectedLanguage)),
       tap(() => this.num++),
+      tap(() => this.num++), // double it because we are making a GET and a PUT
       tap(() => this.translationsProcessed++),
       mergeMap((result) => result),
       tap(() => this.showProgress = true),
@@ -327,6 +326,23 @@ export class AddressFromEditorComponent implements OnInit {
   // helper
   languageParameter(lang) {
     return ('?lang=' + lang);
+  }
+
+  setAllValuesChanged(newVal) {
+    if (newVal == '') {
+      this.resetAllValuesChanged();
+    } else {
+      this.letters.forEach(l=> {
+        l.addressFrom = newVal;
+        this.checkDirtyLetter(l);
+      });
+    }
+  }
+  resetAllValuesChanged() {
+    this.letters.forEach(l=> {
+      l.reset();
+      this.checkDirtyLetter(l);
+    });
   }
 
   addressFromEnabledChanged(newVal, letter) {
