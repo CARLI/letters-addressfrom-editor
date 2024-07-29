@@ -1,11 +1,3 @@
-<div class="eca-actions" *ngIf="languages.length > 1">
-  <mat-label>Language:</mat-label>
-  <mat-select [(value)]="selectedLanguage" (selectionChange)="languageChanged($event, selectedLanguage)">
-    <div *ngFor="let language of languages">
-      <mat-option [value]="language">{{language}}</mat-option>
-    </div>
-  </mat-select>
-</div>
 <div class="eca-actions" *ngIf="languagesLoaded">
   <button mat-flat-button type="button" color="primary" (click)="loadLetters()">Retrieve Letters</button>
   <button mat-flat-button type="button" color="secondary" (click)="clearLetters()" [disabled]="letters?.length < 1">Clear</button>
@@ -76,8 +68,17 @@
 
 </div>
 
+<div *ngIf="letters?.length > 0">
+  <mat-label>Language</mat-label><mat-select id="selectedLanguage" [(value)]="selectedLanguage" (selectionChange)="languageChanged($event, selectedLanguage)"  [disabled]="dirtyLetters() > 0" labelPosition="before">
+    <div *ngFor="let language of languages">
+      <mat-option [value]="language">{{language}}</mat-option>
+    </div>
+  </mat-select>
+  <button mat-flat-button type="button" color="primary" (click)="updateTranslations()" [disabled]="dirtyLetters() > 0">Update Translations for {{ selectedLanguage }}</button>
+</div>
+
 <ng-template #emptyList>
-  <div id="emptyList" *ngIf="languagesLoaded">
+  <div id="emptyList">
     <span class="uxf-icon uxf-list" style="font-size: 3em;"></span>
     <div>Click 'Retrieve Letters' to load addressFrom label values.</div>
   </div>

@@ -1,6 +1,6 @@
 import { Component, OnInit, Injectable } from '@angular/core';
 import { CloudAppRestService, CloudAppEventsService, RestErrorResponse, AlertService, Request, HttpMethod } from '@exlibris/exl-cloudapp-angular-lib';
-import { map, catchError, switchMap, mergeMap, tap, toArray, filter, finalize, take } from 'rxjs/operators';
+import { map, catchError, switchMap, concatMap, mergeMap, tap, toArray, filter, finalize, take } from 'rxjs/operators';
 import { CanActivate, Router, ActivatedRouteSnapshot, RouterStateSnapshot } from '@angular/router';
 import { of, from, forkJoin } from 'rxjs';
 import { AppService } from '../app.service';
@@ -31,9 +31,11 @@ export class AddressFromEditorComponent implements OnInit {
   labelLinks = new Map<string, string>();
 
   languages = new Array<string>();
-  letterMapByLanguage = new Map<string , Map<string, Letter>>();
   selectedLanguage = 'en'; // default
-  selectedLanguages = new Array<string>();
+
+  translationsProcessed = 0;
+  translationsUnchanged = 0;
+  translationsModified = 0;
 
   constructor( 
     private restService: CloudAppRestService,
@@ -47,8 +49,7 @@ export class AddressFromEditorComponent implements OnInit {
 
   languageChanged(newVal, lang) {
     console.log(`selectedLanguage: ${this.selectedLanguage}`);
-    this.populateSelectedLanguages();
-    this.clearLetters();
+    //this.clearLetters();
   }
   
   // Hack alert: When we make an API call using the 'lang' parameter, Alma seems to get confused and begins
@@ -57,26 +58,16 @@ export class AddressFromEditorComponent implements OnInit {
   resetToDefaultLanguage() {
     let firstLabelLink = this.labelLinks.values().next().value;
     let url = firstLabelLink + this.languageParameter(''); 
-    //console.log(`languageReset: ${firstLabelLink} , url: ${url}`);
-    this.restService.call(url).subscribe({
+    console.log(`languageReset: ${firstLabelLink} , url: ${url}`);
+    this.loading = true;
+    this.restService.call(url)
+    .pipe(
+      finalize(() => this.loading = false),
+    ).subscribe({
         next: (s: any)=>{
-          //console.log(`resetToDefaultLanguage() call finished: ${JSON.stringify(s)}`);
+          console.log(`resetToDefaultLanguage() call finished`);
         }
     });
-  }
-
-  // for scalability reasons (Alma API calls will timeout if > 30 sec),
-  // we can only process up to two languages at a time
-  // with English necessarily being one of them.
-  // This is because English is treated as the 'base' language, whereas
-  // all other languages are considered 'translations'.
-  populateSelectedLanguages() {
-    this.selectedLanguages = new Array<string>();
-    this.selectedLanguages.push('en');
-    // English language is always necessary in Alma apparently
-    if (this.selectedLanguage != 'en') 
-      this.selectedLanguages.push(this.selectedLanguage);
-    console.log(`selectedLanguages: ${this.selectedLanguages} (${this.selectedLanguages.length})`);
   }
 
   loadLanguages() {
@@ -99,14 +90,9 @@ export class AddressFromEditorComponent implements OnInit {
               }
             }
           });
-          this.populateSelectedLanguages();
         },
         error: e => this.alert.error('Error in loadLanguages(): ', e.message),
         complete: () => {
-          this.letterMapByLanguage.set('en', new Map<string, Letter>());
-          this.languages.forEach(l=>{
-            this.letterMapByLanguage.set(l, new Map<string, Letter>());
-          });
           console.log('Finished loading languages')
           this.languagesLoaded = true;
         },
@@ -126,65 +112,137 @@ export class AddressFromEditorComponent implements OnInit {
       mergeMap((l: any) => l.letter ),
       filter((l: any) => l.enabled.value==='true'),
       filter((l: any) => l.channel==='EMAIL'),
-      tap(() => this.num+=this.selectedLanguages.length),
+      tap(() => this.num++),
       tap((l: any) => {
         this.letterDescriptions.set(l.code, l.name);
         this.labelLinks.set(l.code, l.labels.link);
       }),
-      //take(10), // for debugging, only work with small subset
-      mergeMap((l: any) => this.getLetter(l)),
+      map((l: any) => this.getEnLetter(l)),
       toArray(),
       tap(() => this.showProgress = true),
       switchMap(reqs => forkJoin(reqs)),
-      finalize(() => {this.loading = false; this.resetToDefaultLanguage()}),
+      finalize(() => this.loading = false),
     ).subscribe({
-        next: (s: any)=>{
-          let keepGoing = true;
-          s.forEach(letter=>{
-            if (keepGoing) {
-              if (isRestErrorResponse(letter)) {
-                console.log(`Error retrieving letter: ${letter.message}`);
-                keepGoing = false;
-              } else {
-                let l: Letter = new Letter(letter);
-                let letterMap: Map<string, Letter> = this.letterMapByLanguage.get(letter.language.value);
-                console.log(`caching ${letter.language.value} : ${letter.description}`);
-                letterMap.set(l.name, l);
-
-                //////////////
-                // if multiple languages are enabled in Alma, there will be multiple versions of each letter
-                // populate only one of each letter into letters[]
-                let found = this.letters.findIndex((obj) => {
-                  return obj.name === l.name;
-                });
-                if (found === -1) {
-                  l.description = this.letterDescriptions.get(l.name);
-                  this.letters.push(l);
-                }
-                //////////////
-              }
+      next: (s: any)=>{
+        let keepGoing = true;
+        s.forEach(letter=>{
+          if (keepGoing) {
+            if (isRestErrorResponse(letter)) {
+              console.log(`Error retrieving letter: ${letter.message}`);
+              keepGoing = false;
+            } else {
+              let l: Letter = new Letter(letter);
+              l.description = this.letterDescriptions.get(l.name);
+              this.letters.push(l);
             }
-          });
-
-        },
-        error: e => this.alert.error('Error in loadLetters(): ', e.message),
-        complete: () => this.sortLetters(),
+          }
         });
+      },
+      error: e => this.alert.error('Error in loadLetters(): ', e.message),
+      complete: () => this.sortLetters(),
+    });
   }
 
-  getLetter(letter: any) {
-    const observableArray = [];
-    this.selectedLanguages.forEach(lang=>{
-      let url = this.labelLinks.get(letter.code) + this.languageParameter(lang); 
-      observableArray.push(
-        this.restService.call(url).pipe(
-          tap(() => this.processed++ ),
-          tap(() => console.log(`getting ${letter.description} ; lang ${lang}`)),
-          catchError(e => of(e)),
-        )
-      );
+  getEnLetter(letter: any) {
+    let url = this.labelLinks.get(letter.code) + this.languageParameter('en'); 
+    return this.restService.call(url).pipe(
+      tap(() => this.processed++ ),
+      tap(() => console.log(`getting ${letter.description} ; lang en`)),
+      catchError(e => of(e)),
+    );
+  }
+
+  getLangLetter(letter: Letter, lang: string) {
+    let url = this.labelLinks.get(letter.name) + this.languageParameter(lang); 
+    return this.restService.call(url).pipe(
+      tap(() => this.processed++ ),
+      tap(() => console.log(`getLangLetter, getting ${letter.description} ; lang ${lang}`)),
+      catchError(e => of(e)),
+    );
+  }
+
+  updateTranslations() {
+    this.loading = true;
+    this.processed = 0;
+    this.showProgress = false;
+    this.num = 0;
+
+    this.translationsProcessed = 0;
+    this.translationsUnchanged = 0;
+    this.translationsModified = 0;
+
+    from(this.letters)
+    .pipe(
+      map((l) => this.getLangLetter(l, this.selectedLanguage)),
+      tap(() => this.num++),
+      tap(() => this.translationsProcessed++),
+      mergeMap((result) => result),
+      tap(() => this.showProgress = true),
+      map((l) => this.updateTranslation(l)),
+      toArray(),
+      switchMap(reqs=>forkJoin(reqs)),
+      finalize(() => {
+        this.loading = false;
+        this.resetToDefaultLanguage();
+        this.alert.success(`Translations for '${this.selectedLanguage}' processed: ${this.translationsProcessed}`, {delay: 10000});
+        this.alert.success(`Translations for '${this.selectedLanguage}' unchanged: ${this.translationsUnchanged}`, {delay: 10000});
+        this.alert.success(`Translations for '${this.selectedLanguage}' modified: ${this.translationsModified}`, {delay: 10000});
+      }),
+    ).subscribe(
+      {
+      next: (s: any[]) => {
+        s.forEach(letter=>{
+          if (isRestErrorResponse(letter)) {
+            console.log(`Error updating translation: ${letter.message}`);
+            this.alert.error(`Error updating translation: ${letter.message}`);
+          } else {
+            console.log(`Processed translation for ${letter.name}`);
+          }
+        })
+      },
+      error: e => this.alert.error('Error in updateTranslations(): ', e.message),
     });
-    return observableArray;
+  }
+
+  updateTranslation(letter: any) {
+    let enLetter: Letter = null;
+    let found = this.letters.findIndex((obj) => {
+      return obj.name === letter.name;
+    });
+    if (found === -1) {
+      let errorMsg = `Internal error: Couldn't find cached Letter object: ${letter.description}`;
+      this.alert.error(errorMsg);
+      letter['error'] = errorMsg;
+      return of(letter);
+    } else {
+      enLetter = this.letters[found];
+      console.log(`addressFrom value from cached ${enLetter.description} Letter object: ${enLetter.addressFrom}`)
+    }
+
+    let l: Letter = new Letter(letter);
+
+    // If the translation value is already correct, then no need to perform update
+    if (enLetter.addressFrom == l.addressFrom) {
+      this.translationsUnchanged++;
+      console.log(`no need to update ${this.selectedLanguage} translation for ${letter.description}: ${this.selectedLanguage} addressFrom (${l.addressFrom}) is already set to en addressFrom (${enLetter.addressFrom})`);
+      //this.alert.info(`no need to update: ${this.selectedLanguage} ${letter.description}`);
+      return of(letter);
+    }
+    this.translationsModified++;
+    l.setAddressFrom(enLetter.addressFrom, enLetter.addressFromEnabled);
+    const requestBody = l.restObject;
+    let url = this.labelLinks.get(letter.name) + this.languageParameter(this.selectedLanguage); 
+
+    let request: Request = {
+      url: url,
+      method: HttpMethod.PUT,
+      requestBody
+    };
+    return this.restService.call(request).pipe(
+      tap(() => this.processed++ ),
+      tap(() => console.log(`updating ${this.selectedLanguage} translation ${letter.description}`)),
+      catchError(e => of(e)),
+    )
   }
 
   updateLetters() {
@@ -195,13 +253,12 @@ export class AddressFromEditorComponent implements OnInit {
     this.num = 0;
     from(this.getUpdatedLetters())
     .pipe(
-      mergeMap((l: any) => this.updateLetter(l)),
+      map(l=>this.updateLetter(l)),
       toArray(),
       tap(() => this.showProgress = true),
       switchMap(reqs=>forkJoin(reqs)),
-      finalize(() => {this.loading = false; this.resetToDefaultLanguage()}),
-    )
-    .subscribe({
+      finalize(() => this.loading = false),
+    ).subscribe({
       next: (s: any[]) => {
         s.forEach(letter=>{
           if (isRestErrorResponse(letter)) {
@@ -220,7 +277,7 @@ export class AddressFromEditorComponent implements OnInit {
               console.log(`refreshed cached Letter object: ${newLetter.description}`)
             }
           }
-        });
+        })
       },
       error: e => this.alert.error('Error in updateLetters(): ', e.message),
     });
@@ -231,7 +288,7 @@ export class AddressFromEditorComponent implements OnInit {
     this.num = 0;
     this.letters.forEach(l=> {
       if (l.isDirty()) {
-        this.num+=this.selectedLanguages.length;
+        this.num++;
         updatedLetters.push(l);
       }
     })
@@ -242,31 +299,18 @@ export class AddressFromEditorComponent implements OnInit {
   }
 
   updateLetter(letter: Letter) {
-    const observableArray = [];
-    this.selectedLanguages.forEach(lang=>{
-      let letterMap: Map<string, Letter> = this.letterMapByLanguage.get(lang);
-      let thisLetter: Letter = letterMap.get(letter.name);
-
-      let url =  this.labelLinks.get(letter.name) + this.languageParameter(lang); 
-      thisLetter.setAddressFrom(letter.addressFrom, letter.addressFromEnabled);
-      const requestBody = thisLetter.restObject;
-      //console.log(`lang:${lang} requestBody: ${JSON.stringify(requestBody)}`);
-      let request: Request = {
-        url: url,
-        method: HttpMethod.PUT,
-        requestBody
-      };
-      observableArray.push(
-        this.restService.call(request).pipe(
-          tap(() => this.processed++ ),
-          tap(() => console.log(`updating ${letter.description}`)),
-          catchError(e => of(e)),
-        )
-      );
-    });
-
-    return observableArray;
-
+    letter.setAddressFrom(letter.addressFrom, letter.addressFromEnabled);
+    const requestBody = letter.restObject;
+    let request: Request = {
+      url: this.labelLinks.get(letter.name),
+      method: HttpMethod.PUT,
+      requestBody
+    };
+    return this.restService.call(request).pipe(
+      tap(() => this.processed++ ),
+      tap(() => console.log(`updating ${letter.description}`)),
+      catchError(e => of(e)),
+    )
   }
 
   clearLetters() {
@@ -296,6 +340,10 @@ export class AddressFromEditorComponent implements OnInit {
   }
 
   controlChanged(letter: Letter) {
+    this.checkDirtyLetter(letter);
+  }
+
+  checkDirtyLetter(letter: Letter) {
     if (letter.isDirty()) {
       this.dirtyControls[letter.name] = 1;
     } else {

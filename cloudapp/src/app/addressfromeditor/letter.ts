@@ -2,6 +2,7 @@
 export class Letter {
     name: string;
     description: string;
+    translation?: string;
     restObject: any;
     patronFacing: boolean;
     addressFrom: string;
