@@ -20,7 +20,7 @@
 <div *ngIf="letters?.length > 0 else emptyList">
     <ul>
       <div class="eca-actions">
-        <button mat-flat-button color="primary" (click)="updateLetters()"
+        <button mat-flat-button color="primary" (click)="updateLetters('addressFrom Update succeeded', null)"
         [disabled]="loading || dirtyLetters() < 1">Update
         </button>
       </div>
@@ -74,7 +74,7 @@
       </li>
       
       <div class="eca-actions">
-        <button mat-flat-button color="primary" (click)="updateLetters()"
+        <button mat-flat-button color="primary" (click)="updateLetters('addressFrom Update succeeded', null)"
         [disabled]="loading || dirtyLetters() < 1">Update
         </button>
       </div>

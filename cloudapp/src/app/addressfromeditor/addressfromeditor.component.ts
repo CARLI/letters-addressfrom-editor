@@ -1,6 +1,6 @@
 import { Component, OnInit, Injectable } from '@angular/core';
 import { CloudAppRestService, CloudAppEventsService, RestErrorResponse, AlertService, Request, HttpMethod } from '@exlibris/exl-cloudapp-angular-lib';
-import { map, catchError, switchMap, concatMap, mergeMap, tap, toArray, filter, finalize, take } from 'rxjs/operators';
+import { map, catchError, switchMap, mergeMap, tap, toArray, filter, finalize, take } from 'rxjs/operators';
 import { CanActivate, Router, ActivatedRouteSnapshot, RouterStateSnapshot } from '@angular/router';
 import { of, from, forkJoin } from 'rxjs';
 import { AppService } from '../app.service';
@@ -35,9 +35,8 @@ export class AddressFromEditorComponent implements OnInit {
   languages = new Array<string>();
   selectedLanguage = 'en'; // default
 
-  translationsProcessed = 0;
-  translationsUnchanged = 0;
-  translationsModified = 0;
+  // sometimes Alma needs to be 'nudged' in order to acknowledge new Translations
+  // updating the en code-table seems to work
   translatedLettersNeededToBeUpdatedAgain = new Array<Letter>();
 
   constructor( 
@@ -110,7 +109,7 @@ export class AddressFromEditorComponent implements OnInit {
       filter((l: any) => l.enabled.value==='true'),
       filter((l: any) => l.channel==='EMAIL'),
       tap(() => this.num++),
-//take(3), // debugging
+      //take(3),
       tap((l: any) => {
         this.letterDescriptions.set(l.code, l.name);
         this.labelLinks.set(l.code, l.labels.link);
@@ -165,9 +164,6 @@ export class AddressFromEditorComponent implements OnInit {
     this.showProgress = false;
     this.num = this.letters.length;
 
-    //this.translationsProcessed = 0;
-    //this.translationsUnchanged = 0;
-    //this.translationsModified = 0;
     this.translatedLettersNeededToBeUpdatedAgain = new Array<Letter>();
 
     let translations: Letter[] = new Array<Letter>();
@@ -203,16 +199,9 @@ export class AddressFromEditorComponent implements OnInit {
     this.num = translationsToUpdate.length;
     from(translationsToUpdate)
     .pipe(
-      //tap(() => this.translationsProcessed++),
       map((l) => this.updateTranslation(l)),
       toArray(),
       switchMap(reqs=>forkJoin(reqs)),
-      finalize(() => {
-        //this.loading = false;
-        //this.alert.success(`Translations for '${this.selectedLanguage}' processed: ${this.translationsProcessed}`, {delay: 10000});
-        //this.alert.success(`Translations for '${this.selectedLanguage}' unchanged: ${this.translationsUnchanged}`, {delay: 10000});
-        //this.alert.success(`Translations for '${this.selectedLanguage}' modified: ${this.translationsModified}`, {delay: 10000});
-      }),
     ).subscribe(
       {
       next: (s: any[]) => {
@@ -226,7 +215,7 @@ export class AddressFromEditorComponent implements OnInit {
         })
       },
       error: e => this.alert.error('Error in updateTranslations2(): ', e.message),
-      complete: () => this.updateLetters(this.translatedLettersNeededToBeUpdatedAgain),
+      complete: () => this.updateLetters(`Translations for '${this.selectedLanguage}' succeeded`, this.translatedLettersNeededToBeUpdatedAgain),
     });
   }
 
@@ -242,20 +231,10 @@ export class AddressFromEditorComponent implements OnInit {
       return of(letter);
     } else {
       enLetter = this.letters[found];
-      console.log(`addressFrom value from cached ${enLetter.description} Letter object: ${enLetter.addressFrom}`)
+      //console.log(`addressFrom value from cached ${enLetter.description} Letter object: ${enLetter.addressFrom}`)
     }
 
-/****
-    // If the translation value is already correct, then no need to perform update
-    if (enLetter.addressFrom == letter.addressFrom) {
-      this.num--;
-      //this.translationsUnchanged++;
-      console.log(`*** ${this.selectedLanguage} translation *unchanged* for ${letter.description}: ${this.selectedLanguage} addressFrom (${letter.addressFrom}) is already set to en addressFrom (${enLetter.addressFrom})`);
-      return of(letter);
-    }
-****/
     this.translatedLettersNeededToBeUpdatedAgain.push(enLetter); // Alma needs you to re-update the en code-table in order for translation to take effect?
-    //this.translationsModified++;
     letter.setAddressFrom(enLetter.addressFrom, enLetter.addressFromEnabled);
     const requestBody = letter.restObject;
     let url = this.labelLinks.get(letter.name) + this.languageParameter(this.selectedLanguage); 
@@ -272,13 +251,19 @@ export class AddressFromEditorComponent implements OnInit {
     )
   }
 
-  updateLetters(lettersToUpdate?: Letter[]) {
+  updateLetters(alertMessage: string, lettersToUpdate: Letter[]) {
     this.loading = true;
     this.clearDirtyControlsFlag();
     this.processed = 0;
     this.showProgress = false;
     this.num = 0;
-    from((typeof lettersToUpdate !== 'undefined') ? lettersToUpdate : this.getUpdatedLetters())
+    let updateThese: Letter [];
+    if (lettersToUpdate != null) {
+      updateThese = lettersToUpdate;
+    } else {
+      updateThese = this.getUpdatedLetters();
+    }
+    from(updateThese)
     .pipe(
       tap(() => { if (typeof lettersToUpdate !== 'undefined') this.num++ }),
       map(l=>this.updateLetter(l)),
@@ -288,6 +273,7 @@ export class AddressFromEditorComponent implements OnInit {
       finalize(() => {
         this.loading = false,
         this.resetToDefaultLanguage();
+        this.alert.success(alertMessage, {delay: 5000});
       }),
     ).subscribe({
       next: (s: any[]) => {
