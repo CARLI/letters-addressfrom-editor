@@ -77,7 +77,7 @@ export class AddressFromEditorComponent implements OnInit {
         next: (s: any[])=>{
           s.forEach(lang=>{
             if (isRestErrorResponse(lang)) {
-              console.log(`Error retrieving languages: ${lang.message}`);
+              console.log(`Error retrieving languages: ${JSON.stringify(lang)}`);
             } else {
               // since English code-table is always necessary, no need to keep track of it
               console.log(`Loaded language: ${lang.column0}`);
@@ -125,7 +125,7 @@ export class AddressFromEditorComponent implements OnInit {
         s.forEach(letter=>{
           if (keepGoing) {
             if (isRestErrorResponse(letter)) {
-              console.log(`Error retrieving letter: ${letter.message}`);
+              console.log(`Error retrieving letter: ${JSON.stringify(letter)}`);
               keepGoing = false;
             } else {
               let l: Letter = new Letter(letter);
@@ -180,7 +180,7 @@ export class AddressFromEditorComponent implements OnInit {
         s.forEach(letter=>{
           if (keepGoing) {
             if (isRestErrorResponse(letter)) {
-              console.log(`Error retrieving letter: ${letter.message}`);
+              console.log(`Error retrieving letter: ${JSON.stringify(letter)}`);
               keepGoing = false;
             } else {
               let l: Letter = new Letter(letter);
@@ -207,10 +207,10 @@ export class AddressFromEditorComponent implements OnInit {
       next: (s: any[]) => {
         s.forEach(letter=>{
           if (isRestErrorResponse(letter)) {
-            console.log(`Error updating translation: ${letter.message}`);
+            console.log(`Error updating translation: ${JSON.stringify(letter)}`);
             this.alert.error(`Error updating translation: ${letter.message}`);
           } else {
-            console.log(`Processed translation for ${letter.name}`);
+            console.log(`Processed translation for ${letter.description}`);
           }
         })
       },
@@ -242,6 +242,10 @@ export class AddressFromEditorComponent implements OnInit {
     let request: Request = {
       url: url,
       method: HttpMethod.PUT,
+      headers: { 
+        "Content-Type": "application/json",
+        Accept: "application/json" 
+      },
       requestBody
     };
     return this.restService.call(request).pipe(
@@ -265,7 +269,7 @@ export class AddressFromEditorComponent implements OnInit {
     }
     from(updateThese)
     .pipe(
-      tap(() => { if (typeof lettersToUpdate !== 'undefined') this.num++ }),
+      tap(() => { if (lettersToUpdate != null) this.num++ }),
       map(l=>this.updateLetter(l)),
       toArray(),
       tap(() => this.showProgress = true),
@@ -279,7 +283,7 @@ export class AddressFromEditorComponent implements OnInit {
       next: (s: any[]) => {
         s.forEach(letter=>{
           if (isRestErrorResponse(letter)) {
-            console.log(`Error updating letter: ${letter.message}`);
+            console.log(`Error updating letter: ${JSON.stringify(letter)}`);
             this.alert.error(`Error updating letter: ${letter.message}`);
           } else {
             let newLetter = new Letter(letter);
@@ -320,6 +324,10 @@ export class AddressFromEditorComponent implements OnInit {
     let request: Request = {
       url: this.labelLinks.get(letter.name),
       method: HttpMethod.PUT,
+      headers: { 
+        "Content-Type": "application/json",
+        Accept: "application/json" 
+      },
       requestBody
     };
     return this.restService.call(request).pipe(
