@@ -83,12 +83,14 @@
 </div>
 
 <div *ngIf="letters?.length > 0">
-  <mat-label>Language</mat-label><mat-select id="selectedLanguage" [(value)]="selectedLanguage" [disabled]="dirtyLetters() > 0" labelPosition="before">
-    <div *ngFor="let language of languages">
-      <mat-option [value]="language">{{language}}</mat-option>
-    </div>
-  </mat-select>
-  <button mat-flat-button type="button" color="primary" (click)="updateTranslations()" [disabled]="dirtyLetters() > 0">Update Translations for {{ selectedLanguage }}</button>
+  <div *ngIf="languages?.length > 0">
+    <mat-label>Language</mat-label><mat-select id="selectedLanguage" [(value)]="selectedLanguage" [disabled]="dirtyLetters() > 0" labelPosition="before">
+      <div *ngFor="let language of languages">
+        <mat-option [value]="language">{{language}}</mat-option>
+      </div>
+    </mat-select>
+    <button mat-flat-button type="button" color="primary" (click)="updateTranslations()" [disabled]="dirtyLetters() > 0">Update Translations for {{ selectedLanguage }}</button>
+  </div>
 </div>
 
 <ng-template #emptyList>
