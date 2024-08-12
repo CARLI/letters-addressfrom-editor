@@ -121,17 +121,13 @@ export class AddressFromEditorComponent implements OnInit {
       finalize(() => this.loading = false),
     ).subscribe({
       next: (s: any)=>{
-        let keepGoing = true;
         s.forEach(letter=>{
-          if (keepGoing) {
-            if (isRestErrorResponse(letter)) {
-              console.log(`Error retrieving letter: ${JSON.stringify(letter)}`);
-              keepGoing = false;
-            } else {
-              let l: Letter = new Letter(letter);
-              l.description = this.letterDescriptions.get(l.name);
-              this.letters.push(l);
-            }
+          if (isRestErrorResponse(letter)) {
+            console.log(`Error retrieving letter: ${JSON.stringify(letter)}`);
+          } else {
+            let l: Letter = new Letter(letter);
+            l.description = this.letterDescriptions.get(l.name);
+            this.letters.push(l);
           }
         });
       },
@@ -176,16 +172,12 @@ export class AddressFromEditorComponent implements OnInit {
       switchMap(reqs => forkJoin(reqs)),
     ).subscribe({
       next: (s: any)=>{
-        let keepGoing = true;
         s.forEach(letter=>{
-          if (keepGoing) {
-            if (isRestErrorResponse(letter)) {
-              console.log(`Error retrieving letter: ${JSON.stringify(letter)}`);
-              keepGoing = false;
-            } else {
-              let l: Letter = new Letter(letter);
-              translations.push(l);
-            }
+          if (isRestErrorResponse(letter)) {
+            console.log(`Error retrieving letter: ${JSON.stringify(letter)}`);
+          } else {
+            let l: Letter = new Letter(letter);
+            translations.push(l);
           }
         });
       },
@@ -207,8 +199,7 @@ export class AddressFromEditorComponent implements OnInit {
       next: (s: any[]) => {
         s.forEach(letter=>{
           if (isRestErrorResponse(letter)) {
-            console.log(`Error updating translation: ${JSON.stringify(letter)}`);
-            this.alert.error(`Error updating translation: ${letter.message}`);
+            console.log(`Error message received while updating translation: ${JSON.stringify(letter)}`);
           } else {
             console.log(`Processed translation for ${letter.description}`);
           }
@@ -284,7 +275,23 @@ export class AddressFromEditorComponent implements OnInit {
         s.forEach(letter=>{
           if (isRestErrorResponse(letter)) {
             console.log(`Error updating letter: ${JSON.stringify(letter)}`);
-            this.alert.error(`Error updating letter: ${letter.message}`);
+            if (letter.status != 200) {
+              // only alert user when we do not receive a HTTP/200
+              // because it seems we're sometimes getting "false" error messages
+              // like the following:
+              //
+              //{
+              //  "ok": false,
+              //  "status": 200,
+              //  "statusText": "OK",
+              //  "message": "Http failure during parsing for https://redacted.alma.exlibrisgroup.com/almaws/v1/conf/code-tables/PINNumberGenerationLetter?_=1723476645770",
+              //  "error": {
+              //    "error": {},
+              //    "text": "<!DOCTYPE html PUBLIC \"-//W3C//DTD XHTML 1.0 Transitional//EN\" \"http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd\">\n<html xmlns=\"http://www.w3.org/1999/xhtml\">\n<head><META HTTP-EQUIV=\"CONTENT-TYPE\" CONTENT=\"TEXT/HTML; CHARSET=utf-8\"/>\n<title>Error</title>\n</head>\n                                <body> <body style=\"background-color:GhostWhite;\">\n                                <center>\n                               \n                                <H1>Sorry but the page you've been looking for can't be found<br/>\n                                                <P>Please Contact your Library Support or Ex Libris HUB for additional information<br/>\n                                                The reference is the incident ID: 5437948962774151034\n                                </H1>\n                                </center>\n                                </body>\n</html>"
+              //  }
+              //}
+              this.alert.error(`Error updating letter: ${letter.message}`);
+            }
           } else {
             let newLetter = new Letter(letter);
             newLetter.description = this.letterDescriptions.get(newLetter.name);
