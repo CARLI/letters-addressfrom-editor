@@ -25,6 +25,9 @@ export class AddressFromEditorComponent implements OnInit {
 
   setAllValues = '';
 
+  showEnabledLetters = true;
+  showDisabledLetters = false;
+
   // we want to use the 'name' from /conf/letters
   // instead of the 'description' from /conf/code-tables
   // so that it matches what Alma displays in 'Letters Configuration'
@@ -109,7 +112,7 @@ export class AddressFromEditorComponent implements OnInit {
       filter((l: any) => l.enabled.value==='true'),
       filter((l: any) => l.channel==='EMAIL'),
       tap(() => this.num++),
-      //take(3),
+  //take(3),
       tap((l: any) => {
         this.letterDescriptions.set(l.code, l.name);
         this.labelLinks.set(l.code, l.labels.link);
@@ -365,11 +368,25 @@ export class AddressFromEditorComponent implements OnInit {
       this.resetAllValuesChanged();
     } else {
       this.letters.forEach(l=> {
-        l.addressFrom = newVal;
-        this.checkDirtyLetter(l);
+        if (this.showEnabledLetters && l.addressFromEnabled ||
+            this.showDisabledLetters && !l.addressFromEnabled) {
+          l.addressFrom = newVal;
+          this.checkDirtyLetter(l);
+        }
       });
     }
   }
+
+  clearAllValues() {
+   this.letters.forEach(l=> {
+     if (this.showEnabledLetters && l.addressFromEnabled ||
+         this.showDisabledLetters && !l.addressFromEnabled) {
+       l.addressFrom = '';
+       this.checkDirtyLetter(l);
+     }
+   });
+  }
+
   resetAllValuesChanged() {
     this.letters.forEach(l=> {
       l.reset();
@@ -405,11 +422,10 @@ export class AddressFromEditorComponent implements OnInit {
 
   sortLetters() {
     this.letters?.sort((a,b) => {
-      /*
       // If we want to put disabled controls at the end, use this:
-      let  enabledValue: number = (a.addressFromEnabled ? 0 : 1) - (b.addressFromEnabled ? 0 : 1);
-      return enabledValue || a.addressFrom.localeCompare(b.addressFrom) || a.description.localeCompare(b.description);
-      */
+      //let  enabledValue: number = (a.addressFromEnabled ? 0 : 1) - (b.addressFromEnabled ? 0 : 1);
+      //return enabledValue || a.addressFrom.localeCompare(b.addressFrom) || a.description.localeCompare(b.description);
+      // If we don't care about disabled controls when sorting, use this:
       return a.addressFrom.localeCompare(b.addressFrom) || a.description.localeCompare(b.description);
     });
   }
