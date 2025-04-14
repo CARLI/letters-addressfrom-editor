@@ -32,8 +32,8 @@ export class AddressFromEditorComponent implements OnInit {
   // instead of the 'description' from /conf/code-tables
   // so that it matches what Alma displays in 'Letters Configuration'
   letterDescriptions = new Map<string, string>();
-
   labelLinks = new Map<string, string>();
+  letterDescriptionsAndLinksLoaded = false;
 
   languages = new Array<string>();
   selectedLanguage = 'en'; // default
@@ -114,8 +114,10 @@ export class AddressFromEditorComponent implements OnInit {
       tap(() => this.num++),
   //take(3),
       tap((l: any) => {
-        this.letterDescriptions.set(l.code, l.name);
-        this.labelLinks.set(l.code, l.labels.link);
+        if (! this.letterDescriptionsAndLinksLoaded) {
+          this.letterDescriptions.set(l.code, l.name);
+          this.labelLinks.set(l.code, l.labels.link);
+        }
       }),
       map((l: any) => this.getEnLetter(l)),
       toArray(),
@@ -135,7 +137,10 @@ export class AddressFromEditorComponent implements OnInit {
         });
       },
       error: e => this.alert.error('Error in loadLetters(): ', e.message),
-      complete: () => this.sortLetters(),
+      complete: () => {
+        this.letterDescriptionsAndLinksLoaded = true;
+        this.sortLetters();
+      },
     });
   }
 
@@ -350,8 +355,8 @@ export class AddressFromEditorComponent implements OnInit {
   clearLetters() {
     this.letters = [];
     this.clearDirtyControlsFlag();
-    this.letterDescriptions = new Map<string, string>();
-    this.labelLinks = new Map<string, string>();
+    //this.letterDescriptions = new Map<string, string>();
+    //this.labelLinks = new Map<string, string>();
   }
 
   dirtyLetters() {
