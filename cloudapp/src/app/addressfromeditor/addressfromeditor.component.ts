@@ -323,6 +323,7 @@ export class AddressFromEditorComponent implements OnInit {
     let updatedLetters: Letter[] = new Array<Letter>();
     this.letters.forEach(l=> {
       if (l.isDirty()) {
+        console.log(`***change detected in Letter object: ${l.description}***`)
         this.num++;
         updatedLetters.push(l);
       }

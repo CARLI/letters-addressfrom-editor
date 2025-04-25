@@ -59,7 +59,7 @@
       </div>
 
       <div *ngFor="let letter of letters">
-        <li *ngIf="(showEnabledLetters && letter.addressFromEnabled) || (showDisabledLetters && !letter.addressFromEnabled)">
+        <li *ngIf="(showEnabledLetters && (letter.addressFromEnabled || letter.addressFromEnabledOrig)) || (showDisabledLetters && (!letter.addressFromEnabled || !letter.addressFromEnabledOrig))">
           <div [ngClass]="{'dirty': letter.isDirty()}">
             <strong>{{ letter.description }}</strong>
           </div>
