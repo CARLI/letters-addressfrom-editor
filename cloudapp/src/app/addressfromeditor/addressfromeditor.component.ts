@@ -132,7 +132,17 @@ export class AddressFromEditorComponent implements OnInit {
           } else {
             let l: Letter = new Letter(letter);
             l.description = this.letterDescriptions.get(l.name);
-            this.letters.push(l);
+            // if this "row" does not exist in the JSON object, then we can't modify it
+            // (nor can we add it -- I tried to do this and the API doesn't accept it)
+            // so we will ignore these letters
+            // (currently, I've only identified one such letter, ResourceSharingConversationLetter,
+            // but there may be more)
+            const containsAddressFromLabel = letter.row.some(obj => obj.code === "addressFrom");
+            if (! containsAddressFromLabel) {
+              console.log(`***letter: ${l.description} does not contain an addressFrom Label -- skipping***`);
+            } else {
+              this.letters.push(l);
+            }
           }
         });
       },
